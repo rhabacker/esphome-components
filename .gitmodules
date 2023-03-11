@@ -1,0 +1,3 @@
+[submodule "esphome/components/mcp4xxx/arduino-mcp4xxx"]
+	path = esphome/components/mcp4xxx/arduino-mcp4xxx
+	url = https://github.com/jmalloc/arduino-mcp4xxx.git
