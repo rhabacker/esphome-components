@@ -3,20 +3,24 @@ from math import log
 import esphome.config_validation as cv
 import esphome.codegen as cg
 from esphome.components import sensor
+from esphome.components import output
 from esphome.const import (
     CONF_CALIBRATION,
+    CONF_OUTPUT,
     CONF_REFERENCE_RESISTANCE,
     CONF_REFERENCE_TEMPERATURE,
     CONF_SENSOR,
     CONF_TEMPERATURE,
     CONF_VALUE,
-    DEVICE_CLASS_TEMPERATURE,
+    DEVICE_CLASS_EMPTY,
     STATE_CLASS_MEASUREMENT,
-    UNIT_CELSIUS,
+    UNIT_OHM,
 )
 
-ntc_ns = cg.esphome_ns.namespace("ntc")
-NTC = ntc_ns.class_("NTC", cg.Component, sensor.Sensor)
+CONF_OUTPUT_RESISTANCE = "output_resistance"
+
+ntcsim_ns = cg.esphome_ns.namespace("ntcsim")
+NTCSimulation = ntcsim_ns.class_("NTCSimulation", cg.Component, sensor.Sensor)
 
 CONF_B_CONSTANT = "b_constant"
 CONF_A = "a"
@@ -38,12 +42,12 @@ def validate_calibration_parameter(value):
     parts = value.split("->")
     if len(parts) != 2:
         raise cv.Invalid("Calibration parameter must be of form 3000 -> 23°C")
-    voltage = cv.resistance(parts[0].strip())
+    resistance = cv.resistance(parts[0].strip())
     temperature = cv.temperature(parts[1].strip())
     return validate_calibration_parameter(
         {
             CONF_TEMPERATURE: temperature,
-            CONF_VALUE: voltage,
+            CONF_VALUE: resistance,
         }
     )
 
@@ -106,7 +110,7 @@ def process_calibration(value):
         raise cv.Invalid(
             f"Calibration parameter accepts either a list for steinhart-hart calibration, or mapping for b-constant calibration, not {type(value)}"
         )
-
+    print("Coefficient:", a,b,c)
     return {
         CONF_A: a,
         CONF_B: b,
@@ -116,16 +120,18 @@ def process_calibration(value):
 
 CONFIG_SCHEMA = (
     sensor.sensor_schema(
-        NTC,
-        unit_of_measurement=UNIT_CELSIUS,
-        accuracy_decimals=1,
-        device_class=DEVICE_CLASS_TEMPERATURE,
+        NTCSimulation,
+        unit_of_measurement= UNIT_OHM,
+        accuracy_decimals=4,
+        device_class=DEVICE_CLASS_EMPTY,
         state_class=STATE_CLASS_MEASUREMENT,
     )
     .extend(
         {
             cv.Required(CONF_SENSOR): cv.use_id(sensor.Sensor),
             cv.Required(CONF_CALIBRATION): process_calibration,
+            cv.Optional(CONF_OUTPUT): cv.use_id(output.FloatOutput),
+            cv.Optional(CONF_OUTPUT_RESISTANCE): cv.resistance,
         }
     )
     .extend(cv.COMPONENT_SCHEMA)
@@ -138,6 +144,11 @@ async def to_code(config):
 
     sens = await cg.get_variable(config[CONF_SENSOR])
     cg.add(var.set_sensor(sens))
+    if config[CONF_OUTPUT]:
+        outp =  await cg.get_variable(config[CONF_OUTPUT])
+        cg.add(var.set_output(outp))
+        if config[CONF_OUTPUT_RESISTANCE]:
+            cg.add(var.set_output_resistance(config[CONF_OUTPUT_RESISTANCE]))
     calib = config[CONF_CALIBRATION]
     cg.add(var.set_a(calib[CONF_A]))
     cg.add(var.set_b(calib[CONF_B]))
