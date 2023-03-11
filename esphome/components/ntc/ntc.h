@@ -8,7 +8,9 @@ namespace ntc {
 
 class NTC : public Component, public sensor::Sensor {
  public:
+  NTC(bool reversed = false) : reversed_(reversed) {}
   void set_sensor(Sensor *sensor) { sensor_ = sensor; }
+  void set_reversed(bool reversed) { reversed_ = reversed; }
   void set_a(double a) { a_ = a; }
   void set_b(double b) { b_ = b; }
   void set_c(double c) { c_ = c; }
@@ -23,6 +25,7 @@ class NTC : public Component, public sensor::Sensor {
   double a_;
   double b_;
   double c_;
+  bool reversed_{false};
 };
 
 }  // namespace ntc

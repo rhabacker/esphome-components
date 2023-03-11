@@ -5,6 +5,7 @@ import esphome.codegen as cg
 from esphome.components import sensor
 from esphome.const import (
     CONF_CALIBRATION,
+    CONF_REVERSED,
     CONF_REFERENCE_RESISTANCE,
     CONF_REFERENCE_TEMPERATURE,
     CONF_SENSOR,
@@ -13,6 +14,7 @@ from esphome.const import (
     DEVICE_CLASS_TEMPERATURE,
     STATE_CLASS_MEASUREMENT,
     UNIT_CELSIUS,
+    UNIT_OHM,
 )
 
 ntc_ns = cg.esphome_ns.namespace("ntc")
@@ -115,19 +117,27 @@ def process_calibration(value):
 
 
 CONFIG_SCHEMA = (
-    sensor.sensor_schema(
+    cv.Schema(
+        {
+            cv.Required(CONF_SENSOR): cv.use_id(sensor.Sensor),
+            cv.Required(CONF_CALIBRATION): process_calibration,
+            cv.Optional(CONF_REVERSED): cv.boolean,
+        }
+    )
+    cv.Optional(CONF_REVERSED): sensor.sensor_schema(
+        NTC,
+        unit_of_measurement=UNIT_OHM,
+        accuracy_decimals=6,
+        device_class=DEVICE_CLASS_EMPTY,
+        state_class=STATE_CLASS_MEASUREMENT,
+    ),
+    cv.Optional(CONF_REVERSED, default=False): sensor.sensor_schema(
         NTC,
         unit_of_measurement=UNIT_CELSIUS,
         accuracy_decimals=1,
         device_class=DEVICE_CLASS_TEMPERATURE,
         state_class=STATE_CLASS_MEASUREMENT,
-    )
-    .extend(
-        {
-            cv.Required(CONF_SENSOR): cv.use_id(sensor.Sensor),
-            cv.Required(CONF_CALIBRATION): process_calibration,
-        }
-    )
+    ).
     .extend(cv.COMPONENT_SCHEMA)
 )
 
@@ -138,6 +148,8 @@ async def to_code(config):
 
     sens = await cg.get_variable(config[CONF_SENSOR])
     cg.add(var.set_sensor(sens))
+    if config[CONF_REVERSED]:
+        cg.add(var.set_inverted(config[CONF_SENSOR]))
     calib = config[CONF_CALIBRATION]
     cg.add(var.set_a(calib[CONF_A]))
     cg.add(var.set_b(calib[CONF_B]))
