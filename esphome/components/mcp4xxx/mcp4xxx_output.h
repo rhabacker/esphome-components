@@ -1,6 +1,6 @@
 #pragma once
 
-#include "arduino-mcp4xxx/mcp4xxx.h"
+#include "mcp4xxx.h"
 
 #include "esphome/core/component.h"
 #include "esphome/core/entity_base.h"
